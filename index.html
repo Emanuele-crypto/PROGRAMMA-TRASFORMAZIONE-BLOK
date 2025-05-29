@@ -1312,635 +1312,634 @@ $(document).ready(function() {
           'LIMONE': { prima: 32, seconda: 5, torchiato: 6 },
           'ARANCIA': { prima: 35, seconda: 12, torchiato: 6 },
           'MANDARINO': { prima: 42, seconda: 10, torchiato: 4 },
-          ```javascript
-           'POMPELMO': { prima: 30, seconda: 15, torchiato: 6 },
-           'BERGAMOTTO': { prima: 30, seconda: 8, torchiato: 3 }
-       };
-       return yields[agrume] || { prima: 45, seconda: 10, torchiato: 4 };
-   }
-   
-   // Gestione visibilità sezione succo 2ª in base alla linea
-   function toggleSecondaSection(supplierElement) {
-       const linea = supplierElement.find('.linea-trasformazione').val();
-       const secondaSections = supplierElement.find('.seconda-section');
-       
-       if (linea === 'BOE/1100') {
-           secondaSections.removeClass('hidden-field');
-       } else {
-           secondaSections.addClass('hidden-field');
-           // Reset dei valori quando nascosta
-           supplierElement.find('.resa-seconda').val('');
-           supplierElement.find('.quantita-seconda').val('');
-           supplierElement.find('.destinazione-seconda').val('NAT IN TINI');
-           supplierElement.find('.pastorizzato-seconda').val('SI');
-           supplierElement.find('.tenore-polpa-seconda').val('<1%');
-           supplierElement.find('.brix-seconda').val('NAT');
-           supplierElement.find('.conservato-seconda').val('SI');
-           supplierElement.find('.note-seconda').val('SERB. ESTERNI');
-       }
-   }
-   
-   // Mostra/nasconde sezione combinazioni
-   function toggleCombinazioniSection() {
-       const hasSuppliers = $('.supplier-row').length > 0;
-       
-       if (hasSuppliers) {
-           $('#combinazioni-section').removeClass('hidden-field');
-       } else {
-           $('#combinazioni-section').addClass('hidden-field');
-       }
-   }
-   
-   // Aggiorna opzioni select per combinazioni fornitori - MODIFICATA per A e B
-   function updateCombinazioneOptions() {
-       const selectA = $('#combinazione-fornitori-a');
-       const selectB = $('#combinazione-fornitori-b');
-       
-       selectA.empty().append('<option value="">Seleziona combinazione A</option>');
-       selectB.empty().append('<option value="">Seleziona combinazione B</option>');
-       
-       const fornitori = [];
-       $('.supplier-row').each(function() {
-           const index = $(this).data('supplier-index');
-           const fornitore = $(this).find('.nome-fornitore').val() || '';
-           const altroFornitore = $(this).find('.altro-fornitore').val();
-           const nomeFornitore = fornitore === 'ALTRO' ? altroFornitore : fornitore;
-           const certificazione = $(this).find('.certificazione-prodotto').val() || 'N/D';
-           const lineaTrasformazione = $(this).find('.linea-trasformazione').val() || 'N/D';
-           
-           if (nomeFornitore) {
-               fornitori.push({ 
-                   index: index, 
-                   nome: nomeFornitore,
-                   certificazione: certificazione,
-                   linea: lineaTrasformazione
-               });
-           }
-       });
-       
-       // Combinazioni di 2 fornitori
-       for (let i = 0; i < fornitori.length; i++) {
-           for (let j = i + 1; j < fornitori.length; j++) {
-               const combo = `${fornitori[i].index},${fornitori[j].index}`;
-               const label = `F${fornitori[i].index} - ${fornitori[i].nome} [${fornitori[i].certificazione}|${fornitori[i].linea}] + F${fornitori[j].index} - ${fornitori[j].nome} [${fornitori[j].certificazione}|${fornitori[j].linea}]`;
-               selectA.append(`<option value="${combo}">${label}</option>`);
-               selectB.append(`<option value="${combo}">${label}</option>`);
-           }
-       }
-       
-       // Combinazioni di 3 fornitori
-       for (let i = 0; i < fornitori.length; i++) {
-           for (let j = i + 1; j < fornitori.length; j++) {
-               for (let k = j + 1; k < fornitori.length; k++) {
-                   const combo = `${fornitori[i].index},${fornitori[j].index},${fornitori[k].index}`;
-                   const label = `F${fornitori[i].index} - ${fornitori[i].nome} [${fornitori[i].certificazione}|${fornitori[i].linea}] + F${fornitori[j].index} - ${fornitori[j].nome} [${fornitori[j].certificazione}|${fornitori[j].linea}] + F${fornitori[k].index} - ${fornitori[k].nome} [${fornitori[k].certificazione}|${fornitori[k].linea}]`;
-                   selectA.append(`<option value="${combo}">${label}</option>`);
-                   selectB.append(`<option value="${combo}">${label}</option>`);
-               }
-           }
-       }
-   }
-   
-   // Trova l'ultimo fornitore incluso in una combinazione
-   function getLastSupplierInCombination(comboValue) {
-       const indexes = comboValue.split(',').map(i => parseInt(i));
-       const maxIndex = Math.max(...indexes);
-       return $(`[data-supplier-index="${maxIndex}"]`);
-   }
-   
-   // Trova l'ultimo fornitore
-   function getLastSupplier() {
-       let lastSupplier = null;
-       let maxIndex = 0;
-       
-       $('.supplier-row').each(function() {
-           const index = parseInt($(this).attr('data-supplier-index'));
-           if (index > maxIndex) {
-               maxIndex = index;
-               lastSupplier = $(this);
-           }
-       });
-       
-       return lastSupplier;
-   }
-   
-   // Calcola dettagli somma per ogni fornitore (solo per linee BOE/1100)
-   function calculateSumDetails() {
-       const suppliers = $('.supplier-row');
-       const details = [];
-       
-       suppliers.each(function() {
-           const nome = $(this).find('.nome-fornitore').val();
-           const altroNome = $(this).find('.altro-fornitore').val();
-           const nomeFornitore = nome === 'ALTRO' ? altroNome : nome;
-           const linea = $(this).find('.linea-trasformazione').val();
-           
-           const quantitaTrasformata = parseFloat($(this).find('.quantita-trasformata').val()) || 0;
-           const resaSeconda = parseFloat($(this).find('.resa-seconda').val()) || 0;
-           const resaTorchiato = parseFloat($(this).find('.resa-torchiato').val()) || 0;
-           
-           if (nomeFornitore && quantitaTrasformata > 0) {
-               const qtaSeconda = linea === 'BOE/1100' ? (quantitaTrasformata * resaSeconda / 100).toFixed(1) : '0';
-               const qtaTorchiato = (quantitaTrasformata * resaTorchiato / 100).toFixed(1);
-               
-               details.push({
-                   nome: nomeFornitore,
-                   linea: linea,
-                   seconda: qtaSeconda,
-                   torchiato: qtaTorchiato
-               });
-           }
-       });
-       
-       return details;
-   }
-   
-   // Formatta dettagli somma
-   function formatSumDetails(details, type) {
-       if (details.length <= 1) return '';
-       
-       const parts = details.map(d => `${d.nome} = ${d[type]} kg`);
-       return parts.join(' + ');
-   }
-   
-   // Aggiorna somme automatiche per l'ultimo fornitore
-   function updateAutoSums() {
-       const suppliers = $('.supplier-row');
-       if (suppliers.length === 0) return;
-       
-       const lastSupplier = getLastSupplier();
-       
-       if (suppliers.length === 1) {
-           // Con un solo fornitore, calcola normalmente
-           const quantitaTrasformata = parseFloat(lastSupplier.find('.quantita-trasformata').val()) || 0;
-           const resaSeconda = parseFloat(lastSupplier.find('.resa-seconda').val()) || 0;
-           const resaTorchiato = parseFloat(lastSupplier.find('.resa-torchiato').val()) || 0;
-           const linea = lastSupplier.find('.linea-trasformazione').val();
-           
-           const qtaSeconda = linea === 'BOE/1100' ? (quantitaTrasformata * resaSeconda / 100).toFixed(1) : '0';
-           const qtaTorchiato = (quantitaTrasformata * resaTorchiato / 100).toFixed(1);
-           
-           lastSupplier.find('.quantita-seconda').val(qtaSeconda).removeClass('auto-sum-field');
-           lastSupplier.find('.quantita-torchiato').val(qtaTorchiato).removeClass('auto-sum-field');
-           lastSupplier.find('.seconda-details').html('');
-           lastSupplier.find('.torchiato-details').html('');
-           
-           // Rimuovi gli stili da tutti
-           suppliers.find('.quantita-seconda, .quantita-torchiato').removeClass('auto-sum-field');
-       } else {
-           // Con più fornitori, calcola le somme
-           let totalSeconda = 0;
-           let totalTorchiato = 0;
-           
-           suppliers.each(function() {
-               const quantitaTrasformata = parseFloat($(this).find('.quantita-trasformata').val()) || 0;
-               const resaSeconda = parseFloat($(this).find('.resa-seconda').val()) || 0;
-               const resaTorchiato = parseFloat($(this).find('.resa-torchiato').val()) || 0;
-               const linea = $(this).find('.linea-trasformazione').val();
-               
-               if (quantitaTrasformata > 0) {
-                   if (linea === 'BOE/1100') {
-                       totalSeconda += (quantitaTrasformata * resaSeconda / 100);
-                   }
-                   totalTorchiato += (quantitaTrasformata * resaTorchiato / 100);
-               }
-           });
-           
-           // Rimuovi gli stili da tutti i fornitori
-           suppliers.find('.quantita-seconda, .quantita-torchiato').removeClass('auto-sum-field');
-           suppliers.find('.seconda-details, .torchiato-details').html('');
-           
-           // Calcola i valori individuali per gli altri fornitori
-           suppliers.not(lastSupplier).each(function() {
-               const quantitaTrasformata = parseFloat($(this).find('.quantita-trasformata').val()) || 0;
-               const resaSeconda = parseFloat($(this).find('.resa-seconda').val()) || 0;
-               const resaTorchiato = parseFloat($(this).find('.resa-torchiato').val()) || 0;
-               const linea = $(this).find('.linea-trasformazione').val();
-               
-               const qtaSeconda = linea === 'BOE/1100' ? (quantitaTrasformata * resaSeconda / 100).toFixed(1) : '0';
-               const qtaTorchiato = (quantitaTrasformata * resaTorchiato / 100).toFixed(1);
-               
-               $(this).find('.quantita-seconda').val(qtaSeconda);
-               $(this).find('.quantita-torchiato').val(qtaTorchiato);
-           });
-           
-           // Applica le somme solo all'ultimo fornitore
-           lastSupplier.find('.quantita-seconda').val(totalSeconda.toFixed(1)).addClass('auto-sum-field');
-           lastSupplier.find('.quantita-torchiato').val(totalTorchiato.toFixed(1)).addClass('auto-sum-field');
-           
-           // Aggiungi dettagli somma
-           const details = calculateSumDetails();
-           const secondaDetails = formatSumDetails(details.filter(d => d.linea === 'BOE/1100'), 'seconda');
-           const torchiatoDetails = formatSumDetails(details, 'torchiato');
-           
-           if (secondaDetails) {
-               lastSupplier.find('.seconda-details').html(`<strong>Dettaglio:</strong> ${secondaDetails}`);
-           }
-           if (torchiatoDetails) {
-               lastSupplier.find('.torchiato-details').html(`<strong>Dettaglio:</strong> ${torchiatoDetails}`);
-           }
-           
-           // Salva i dettagli globalmente
-           sumDetailsSeconda = details.filter(d => d.linea === 'BOE/1100');
-           sumDetailsTorchiato = details;
-       }
-     }
-   
-   // Ottieni nomi fornitori dalla combinazione
-   function getSupplierNamesFromCombo(comboValue) {
-       const indexes = comboValue.split(',');
-       const names = [];
-       
-       indexes.forEach(index => {
-           const supplierRow = $(`[data-supplier-index="${index}"]`);
-           const fornitore = supplierRow.find('.nome-fornitore').val() || '';
-           const altroFornitore = supplierRow.find('.altro-fornitore').val();
-           const nomeFornitore = fornitore === 'ALTRO' ? altroFornitore : fornitore;
-           if (nomeFornitore) {
-               names.push(nomeFornitore);
-           }
-       });
-       
-       return names.join(' + ');
-   }
-   
-   // Applica combinazione - MODIFICATA per supportare A e B
-   function applyCombination(type) {
-       const selectedCombo = $(`#combinazione-fornitori-${type}`).val();
-       if (!selectedCombo) {
-           alert(`Seleziona prima una combinazione di fornitori ${type.toUpperCase()}`);
-           return;
-       }
-       
-       const indexes = selectedCombo.split(',');
-       let totale = 0;
-       let combinationDetails = []; // Array dettagli per questa combinazione
-       let combinationSupplierIndexes = indexes.map(i => parseInt(i)); // Indici fornitori
-       
-       indexes.forEach(index => {
-           const supplierRow = $(`[data-supplier-index="${index}"]`);
-           
-           // Raccogli informazioni complete del fornitore
-           const fornitore = supplierRow.find('.nome-fornitore').val() || '';
-           const altroFornitore = supplierRow.find('.altro-fornitore').val();
-           const nomeFornitore = fornitore === 'ALTRO' ? altroFornitore : fornitore;
-           const certificazione = supplierRow.find('.certificazione-prodotto').val() || 'N/D';
-           const lineaTrasformazione = supplierRow.find('.linea-trasformazione').val() || 'N/D';
-           
-           const quantitaTrasformata = parseFloat(supplierRow.find('.quantita-trasformata').val()) || 0;
-           const resaPrima = parseFloat(supplierRow.find('.resa-prima').val()) || 0;
-           
-           if (quantitaTrasformata > 0) {
-               totale += (quantitaTrasformata * resaPrima / 100);
-               
-               // Aggiungi dettagli completi del fornitore
-               combinationDetails.push({
-                   nome: nomeFornitore,
-                   certificazione: certificazione,
-                   linea: lineaTrasformazione,
-                   quantita: quantitaTrasformata,
-                   resa: resaPrima,
-                   risultato: (quantitaTrasformata * resaPrima / 100).toFixed(1),
-                   supplierIndex: parseInt(index)
-               });
-           }
-       });
-       
-       const lastSupplierInCombo = getLastSupplierInCombination(selectedCombo);
-       if (lastSupplierInCombo.length > 0) {
-           const quantitaPrimaField = lastSupplierInCombo.find('.quantita-prima');
-           quantitaPrimaField.val(totale.toFixed(1));
-           quantitaPrimaField.addClass('combination-result');
-           quantitaPrimaField.attr('data-combination-type', type); // Marca il tipo di combinazione
-           
-           // Crea testo dettagliato della combinazione
-           const detailedCombination = combinationDetails.map(detail => 
-               `F${detail.supplierIndex} - ${detail.nome} [${detail.certificazione}|${detail.linea}] = ${detail.risultato}kg`
-           ).join(' + ');
-           
-           // Salva variabili specifiche per tipo
-           if (type === 'a') {
-               lastCombinationSuppliersA = combinationDetails.map(detail => detail.nome).join(' + ');
-               combinationDetailsA = combinationDetails;
-               combinationSupplierIndexesA = combinationSupplierIndexes;
-           } else {
-               lastCombinationSuppliersB = combinationDetails.map(detail => detail.nome).join(' + ');
-               combinationDetailsB = combinationDetails;
-               combinationSupplierIndexesB = combinationSupplierIndexes;
-           }
-           
-           const noteElement = lastSupplierInCombo.find('.combination-note');
-           if (noteElement.length === 0) {
-               quantitaPrimaField.after(`<small class="combination-note text-warning d-block" style="font-size: 11px; line-height: 1.2;">Valore da combinazione ${type.toUpperCase()} fornitori:<br/>${detailedCombination}</small>`);
-           } else {
-               noteElement.html(`Valore da combinazione ${type.toUpperCase()} fornitori:<br/>${detailedCombination}`);
-           }
-           
-           alert(`Combinazione ${type.toUpperCase()} applicata! Quantità succo 1ª dell'ultimo fornitore incluso aggiornata a ${totale.toFixed(1)} kg\n\nDettaglio combinazione ${type.toUpperCase()}:\n${combinationDetails.map(d => `F${d.supplierIndex} - ${d.nome} [${d.certificazione}|${d.linea}]: ${d.quantita}kg × ${d.resa}% = ${d.risultato}kg`).join('\n')}`);
-           
-           // Aggiorna tabella riepilogo
-           updateSummaryTable();
-       } else {
-           alert('Nessun fornitore disponibile per applicare la combinazione');
-       }
-   }
-   
-   // Reset combinazione - MODIFICATA per supportare A e B
-   function resetCombination(type) {
-       $('.supplier-row').each(function() {
-           const quantitaPrimaField = $(this).find('.quantita-prima');
-           const combinationType = quantitaPrimaField.attr('data-combination-type');
-           
-           if (quantitaPrimaField.hasClass('combination-result') && combinationType === type) {
-               // Rimuovi la classe combination-result
-               quantitaPrimaField.removeClass('combination-result');
-               quantitaPrimaField.removeAttr('data-combination-type');
-               
-               // Rimuovi la nota di combinazione
-               $(this).find('.combination-note').remove();
-               
-               // Ricalcola il valore basandosi sulla resa
-               calculateYieldQuantities($(this));
-           }
-       });
-       
-       // Reset del select combinazioni
-       $(`#combinazione-fornitori-${type}`).val('');
-       
-       // Reset delle variabili memorizzate
-       if (type === 'a') {
-           lastCombinationSuppliersA = '';
-           combinationDetailsA = [];
-           combinationSupplierIndexesA = [];
-       } else {
-           lastCombinationSuppliersB = '';
-           combinationDetailsB = [];
-           combinationSupplierIndexesB = [];
-       }
-       
-       alert(`Combinazione ${type.toUpperCase()} rimossa. I valori del succo 1ª sono stati ricalcolati in base alle rese.`);
-       
-       // Aggiorna tabella riepilogo
-       updateSummaryTable();
-   }
-   
-   // Aggiorna stili BIO per certificazione, varietà e linea
-   function updateBioStyles(supplierElement) {
-       const certificazione = supplierElement.find('.certificazione-prodotto').val();
-       const certificazioneField = supplierElement.find('.certificazione-prodotto');
-       const varietaField = supplierElement.find('.varieta-prodotto');
-       const lineaField = supplierElement.find('.linea-trasformazione');
-       
-       certificazioneField.removeClass('bio-red-field');
-       varietaField.removeClass('bio-red-field');
-       lineaField.removeClass('bio-red-field');
-       
-       if (['BIO EU', 'BIO DEM', 'BIO NTD', 'BIO DEM/NTD'].includes(certificazione)) {
-           certificazioneField.addClass('bio-red-field');
-           varietaField.addClass('bio-red-field');
-           lineaField.addClass('bio-red-field');
-       }
-   }
-   
-   // Aggiunta nuovo fornitore
-   function addSupplier() {
-       supplierCount++;
-       const template = $('#fornitore-template').html();
-       const newSupplier = $(template);
-       
-       newSupplier.attr('data-supplier-index', supplierCount);
-       newSupplier.find('.supplier-number').text(supplierCount);
-       
-       const agrume = $('#tipo-agrume-giornaliero').val();
-       if (agrume) {
-           const yields = calculateAutoYields(agrume);
-           newSupplier.find('.resa-prima').val(yields.prima);
-           newSupplier.find('.resa-seconda').val(yields.seconda);
-           newSupplier.find('.resa-torchiato').val(yields.torchiato);
-           
-           // Aggiorna opzioni varietà in base al tipo di agrume
-           updateVarietyOptions(newSupplier, agrume);
-       }
-       
-       $('#fornitori-container').append(newSupplier);
-       
-       // Inizializza Select2 per destinazione multipla
-       newSupplier.find('.destinazione-prima').select2({
-           placeholder: "Seleziona fino a 3 destinazioni",
-           maximumSelectionLength: 3,
-           language: {
-               maximumSelected: function() {
-                   return "Puoi selezionare massimo 3 destinazioni";
-               }
-           }
-       });
-       
-       // Nascondi inizialmente la sezione succo 2ª
-       newSupplier.find('.seconda-section').addClass('hidden-field');
-       
-       attachSupplierEvents(newSupplier);
-       updateCombinazioneOptions();
-       toggleCombinazioniSection();
-       updateAutoSums();
-   }
-   
-   // Eventi per ogni fornitore
-   function attachSupplierEvents(supplierElement) {
-       const index = supplierElement.data('supplier-index');
-       
-       // Gestione campo "ALTRO" per fornitore
-       supplierElement.find('.nome-fornitore').change(function() {
-           const altroField = supplierElement.find('.altro-fornitore');
-           if ($(this).val() === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-           updateSummaryTable();
-           updateCombinazioneOptions();
-       });
-       
-       // Gestione campo "ALTRO" per fornitore (altro fornitore)
-       supplierElement.find('.altro-fornitore').on('input', function() {
-           updateCombinazioneOptions();
-           updateSummaryTable();
-       });
-       
-       // Gestione certificazione e colori
-       supplierElement.find('.certificazione-prodotto').change(function() {
-           const altroField = supplierElement.find('.altra-certificazione');
-           const certificazione = $(this).val();
-           
-           if (certificazione === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-           
-           updateDestinationColors(supplierElement);
-           updateBioStyles(supplierElement);
-           updateSummaryTable();
-           updateCombinazioneOptions();
-       });
-       
-       // Gestione altra certificazione
-       supplierElement.find('.altra-certificazione').on('input', function() {
-           updateCombinazioneOptions();
-           updateSummaryTable();
-       });
-       
-       // Gestione linea di trasformazione
-       supplierElement.find('.linea-trasformazione').change(function() {
-           updateBioStyles(supplierElement);
-           toggleSecondaSection(supplierElement);
-           updateCombinazioneOptions();
-           updateAutoSums();
-           updateSummaryTable();
-       });
-       
-       // Gestione campo "ALTRO" per varietà
-       supplierElement.find('.varieta-prodotto').change(function() {
-           const altroField = supplierElement.find('.altra-varieta');
-           if ($(this).val() === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-           updateSummaryTable();
-       });
-       
-       // Gestione bio status per colori destinazione
-       supplierElement.find('.bio-prima').change(function() {
-           updateDestinationColors(supplierElement);
-           updateSummaryTable();
-       });
-       
-       // Gestione campi "ALTRO" per tenore polpa
-       supplierElement.find('.tenore-polpa-prima').change(function() {
-           const altroField = supplierElement.find('.altro-tenore-prima');
-           if ($(this).val() === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-       });
-       
-       supplierElement.find('.tenore-polpa-seconda').change(function() {
-           const altroField = supplierElement.find('.altro-tenore-seconda');
-           if ($(this).val() === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-       });
-       
-       supplierElement.find('.tenore-polpa-torchiato').change(function() {
-           const altroField = supplierElement.find('.altro-tenore-torchiato');
-           if ($(this).val() === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-       });
-       
-       // Gestione campi "ALTRO" per Brix
-       supplierElement.find('.brix-prima, .brix-seconda, .brix-torchiato').change(function() {
-           const altroField = $(this).hasClass('brix-prima') ? supplierElement.find('.altro-brix-prima') :
-                              $(this).hasClass('brix-seconda') ? supplierElement.find('.altro-brix-seconda') :
-                              supplierElement.find('.altro-brix-torchiato');
-           
-           if ($(this).val() === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-       });
-       
-       // Gestione menu destinazioni multiple per succo 1ª - MODIFICATA: rimossa logica per concentrato
-       supplierElement.find('.destinazione-prima').on('change', function() {
-           const selectedValues = $(this).val() || [];
-           const container = $(this).parent();
-           const altroField = container.find('.altra-destinazione');
-           
-           if (selectedValues.includes('ALTRO')) {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-       });
-       
-       // Gestione menu destinazioni per seconda - MODIFICATA: rimossa logica per concentrato
-       supplierElement.find('.destinazione-seconda').change(function() {
-           const container = $(this).parent();
-           const altroField = container.find('.altra-destinazione');
-           
-           if ($(this).val() === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-       });
-       
-       // Gestione menu destinazioni per torchiato
-       supplierElement.find('.destinazione-torchiato').change(function() {
-           const container = $(this).parent();
-           const altroField = container.find('.altra-destinazione');
-           
-           if ($(this).val() === 'ALTRO') {
-               altroField.removeClass('hidden-field');
-           } else {
-               altroField.addClass('hidden-field').val('');
-           }
-       });
-       
-       // Calcoli automatici
-       supplierElement.find('.quantita-fornitore, .quantita-trasformata, .portata-impianto, .orario-inizio, .resa-prima, .resa-seconda, .resa-torchiato').on('input change', function() {
-           calculateEndTime(supplierElement);
-           calculateGiacenza(supplierElement);
-           calculateYieldQuantities(supplierElement);
-           updateTotals();
-           updateSummaryTable();
-           updateAutoSums();
-       });
-       
-       // Rimozione fornitore
-       supplierElement.find('.rimuovi-fornitore').click(function() {
-           if (confirm('Sei sicuro di voler rimuovere questo fornitore?')) {
-               supplierElement.remove();
-               updateTotals();
-               updateSummaryTable();
-               updateCombinazioneOptions();
-               toggleCombinazioniSection();
-               renumberSuppliers();
-               updateAutoSums();
-           }
-       });
-   }
-   
-   // Aggiorna colori destinazione in base a certificazione e bio status
-   function updateDestinationColors(supplierElement) {
-       const certificazione = supplierElement.find('.certificazione-prodotto').val();
-       const bioStatus = supplierElement.find('.bio-prima').val();
-       const destinazionePrimaLabel = supplierElement.find('.destinazione-prima-label');
-       const destinazionePrimaSelect = supplierElement.find('.destinazione-prima').next('.select2-container');
-       
-       destinazionePrimaLabel.removeClass('bio-red-text bio-black-text');
-       destinazionePrimaSelect.removeClass('bio-red-text bio-black-text');
-       
-       if (['BIO EU', 'BIO DEM', 'BIO NTD', 'BIO DEM/NTD'].includes(certificazione)) {
-           if (bioStatus === 'DECLASSATO') {
-               destinazionePrimaLabel.addClass('bio-black-text');
-               destinazionePrimaSelect.find('.select2-selection').css('color', '#000000').css('font-weight', 'bold');
-           } else {
-               destinazionePrimaLabel.addClass('bio-red-text');
-               destinazionePrimaSelect.find('.select2-selection').css('color', '#dc3545').css('font-weight', 'bold');
-           }
-       }
-   }
-   
-   // Calcolo orario fine lavorazione con gestione giorno successivo
-   function calculateEndTime(supplierElement) {
-       const quantitaTrasformata = parseFloat(supplierElement.find('.quantita-trasformata').val()) || 0;
+          'POMPELMO': { prima: 30, seconda: 15, torchiato: 6 },
+          'BERGAMOTTO': { prima: 30, seconda: 8, torchiato: 3 }
+      };
+      return yields[agrume] || { prima: 45, seconda: 10, torchiato: 4 };
+  }
+  
+  // Gestione visibilità sezione succo 2ª in base alla linea
+  function toggleSecondaSection(supplierElement) {
+      const linea = supplierElement.find('.linea-trasformazione').val();
+      const secondaSections = supplierElement.find('.seconda-section');
+      
+      if (linea === 'BOE/1100') {
+          secondaSections.removeClass('hidden-field');
+      } else {
+          secondaSections.addClass('hidden-field');
+          // Reset dei valori quando nascosta
+          supplierElement.find('.resa-seconda').val('');
+          supplierElement.find('.quantita-seconda').val('');
+          supplierElement.find('.destinazione-seconda').val('NAT IN TINI');
+          supplierElement.find('.pastorizzato-seconda').val('SI');
+          supplierElement.find('.tenore-polpa-seconda').val('<1%');
+          supplierElement.find('.brix-seconda').val('NAT');
+          supplierElement.find('.conservato-seconda').val('SI');
+          supplierElement.find('.note-seconda').val('SERB. ESTERNI');
+      }
+  }
+  
+  // Mostra/nasconde sezione combinazioni
+  function toggleCombinazioniSection() {
+      const hasSuppliers = $('.supplier-row').length > 0;
+      
+      if (hasSuppliers) {
+          $('#combinazioni-section').removeClass('hidden-field');
+      } else {
+          $('#combinazioni-section').addClass('hidden-field');
+      }
+  }
+  
+  // Aggiorna opzioni select per combinazioni fornitori - MODIFICATA per A e B
+  function updateCombinazioneOptions() {
+      const selectA = $('#combinazione-fornitori-a');
+      const selectB = $('#combinazione-fornitori-b');
+      
+      selectA.empty().append('<option value="">Seleziona combinazione A</option>');
+      selectB.empty().append('<option value="">Seleziona combinazione B</option>');
+      
+      const fornitori = [];
+      $('.supplier-row').each(function() {
+          const index = $(this).data('supplier-index');
+          const fornitore = $(this).find('.nome-fornitore').val() || '';
+          const altroFornitore = $(this).find('.altro-fornitore').val();
+          const nomeFornitore = fornitore === 'ALTRO' ? altroFornitore : fornitore;
+          const certificazione = $(this).find('.certificazione-prodotto').val() || 'N/D';
+          const lineaTrasformazione = $(this).find('.linea-trasformazione').val() || 'N/D';
+          
+          if (nomeFornitore) {
+              fornitori.push({ 
+                  index: index, 
+                  nome: nomeFornitore,
+                  certificazione: certificazione,
+                  linea: lineaTrasformazione
+              });
+          }
+      });
+      
+      // Combinazioni di 2 fornitori
+      for (let i = 0; i < fornitori.length; i++) {
+          for (let j = i + 1; j < fornitori.length; j++) {
+              const combo = `${fornitori[i].index},${fornitori[j].index}`;
+              const label = `F${fornitori[i].index} - ${fornitori[i].nome} [${fornitori[i].certificazione}|${fornitori[i].linea}] + F${fornitori[j].index} - ${fornitori[j].nome} [${fornitori[j].certificazione}|${fornitori[j].linea}]`;
+              selectA.append(`<option value="${combo}">${label}</option>`);
+              selectB.append(`<option value="${combo}">${label}</option>`);
+          }
+      }
+      
+      // Combinazioni di 3 fornitori
+      for (let i = 0; i < fornitori.length; i++) {
+          for (let j = i + 1; j < fornitori.length; j++) {
+              for (let k = j + 1; k < fornitori.length; k++) {
+                  const combo = `${fornitori[i].index},${fornitori[j].index},${fornitori[k].index}`;
+                  const label = `F${fornitori[i].index} - ${fornitori[i].nome} [${fornitori[i].certificazione}|${fornitori[i].linea}] + F${fornitori[j].index} - ${fornitori[j].nome} [${fornitori[j].certificazione}|${fornitori[j].linea}] + F${fornitori[k].index} - ${fornitori[k].nome} [${fornitori[k].certificazione}|${fornitori[k].linea}]`;
+                  selectA.append(`<option value="${combo}">${label}</option>`);
+                  selectB.append(`<option value="${combo}">${label}</option>`);
+              }
+          }
+      }
+  }
+  
+  // Trova l'ultimo fornitore incluso in una combinazione
+  function getLastSupplierInCombination(comboValue) {
+      const indexes = comboValue.split(',').map(i => parseInt(i));
+      const maxIndex = Math.max(...indexes);
+      return $(`[data-supplier-index="${maxIndex}"]`);
+  }
+  
+  // Trova l'ultimo fornitore
+  function getLastSupplier() {
+      let lastSupplier = null;
+      let maxIndex = 0;
+      
+      $('.supplier-row').each(function() {
+          const index = parseInt($(this).attr('data-supplier-index'));
+          if (index > maxIndex) {
+              maxIndex = index;
+              lastSupplier = $(this);
+          }
+      });
+      
+      return lastSupplier;
+  }
+  
+  // Calcola dettagli somma per ogni fornitore (solo per linee BOE/1100)
+  function calculateSumDetails() {
+      const suppliers = $('.supplier-row');
+      const details = [];
+      
+      suppliers.each(function() {
+          const nome = $(this).find('.nome-fornitore').val();
+          const altroNome = $(this).find('.altro-fornitore').val();
+          const nomeFornitore = nome === 'ALTRO' ? altroNome : nome;
+          const linea = $(this).find('.linea-trasformazione').val();
+          
+          const quantitaTrasformata = parseFloat($(this).find('.quantita-trasformata').val()) || 0;
+          const resaSeconda = parseFloat($(this).find('.resa-seconda').val()) || 0;
+          const resaTorchiato = parseFloat($(this).find('.resa-torchiato').val()) || 0;
+          
+          if (nomeFornitore && quantitaTrasformata > 0) {
+              const qtaSeconda = linea === 'BOE/1100' ? (quantitaTrasformata * resaSeconda / 100).toFixed(1) : '0';
+              const qtaTorchiato = (quantitaTrasformata * resaTorchiato / 100).toFixed(1);
+              
+              details.push({
+                  nome: nomeFornitore,
+                  linea: linea,
+                  seconda: qtaSeconda,
+                  torchiato: qtaTorchiato
+              });
+          }
+      });
+      
+      return details;
+  }
+  
+  // Formatta dettagli somma
+  function formatSumDetails(details, type) {
+      if (details.length <= 1) return '';
+      
+      const parts = details.map(d => `${d.nome} = ${d[type]} kg`);
+      return parts.join(' + ');
+  }
+  
+  // Aggiorna somme automatiche per l'ultimo fornitore
+  function updateAutoSums() {
+      const suppliers = $('.supplier-row');
+      if (suppliers.length === 0) return;
+      
+      const lastSupplier = getLastSupplier();
+      
+      if (suppliers.length === 1) {
+          // Con un solo fornitore, calcola normalmente
+          const quantitaTrasformata = parseFloat(lastSupplier.find('.quantita-trasformata').val()) || 0;
+          const resaSeconda = parseFloat(lastSupplier.find('.resa-seconda').val()) || 0;
+          const resaTorchiato = parseFloat(lastSupplier.find('.resa-torchiato').val()) || 0;
+          const linea = lastSupplier.find('.linea-trasformazione').val();
+          
+          const qtaSeconda = linea === 'BOE/1100' ? (quantitaTrasformata * resaSeconda / 100).toFixed(1) : '0';
+          const qtaTorchiato = (quantitaTrasformata * resaTorchiato / 100).toFixed(1);
+          
+          lastSupplier.find('.quantita-seconda').val(qtaSeconda).removeClass('auto-sum-field');
+          lastSupplier.find('.quantita-torchiato').val(qtaTorchiato).removeClass('auto-sum-field');
+          lastSupplier.find('.seconda-details').html('');
+          lastSupplier.find('.torchiato-details').html('');
+          
+          // Rimuovi gli stili da tutti
+          suppliers.find('.quantita-seconda, .quantita-torchiato').removeClass('auto-sum-field');
+      } else {
+          // Con più fornitori, calcola le somme
+          let totalSeconda = 0;
+          let totalTorchiato = 0;
+          
+          suppliers.each(function() {
+              const quantitaTrasformata = parseFloat($(this).find('.quantita-trasformata').val()) || 0;
+              const resaSeconda = parseFloat($(this).find('.resa-seconda').val()) || 0;
+              const resaTorchiato = parseFloat($(this).find('.resa-torchiato').val()) || 0;
+              const linea = $(this).find('.linea-trasformazione').val();
+              
+              if (quantitaTrasformata > 0) {
+                  if (linea === 'BOE/1100') {
+                      totalSeconda += (quantitaTrasformata * resaSeconda / 100);
+                  }
+                  totalTorchiato += (quantitaTrasformata * resaTorchiato / 100);
+              }
+          });
+          
+          // Rimuovi gli stili da tutti i fornitori
+          suppliers.find('.quantita-seconda, .quantita-torchiato').removeClass('auto-sum-field');
+          suppliers.find('.seconda-details, .torchiato-details').html('');
+          
+          // Calcola i valori individuali per gli altri fornitori
+          suppliers.not(lastSupplier).each(function() {
+              const quantitaTrasformata = parseFloat($(this).find('.quantita-trasformata').val()) || 0;
+              const resaSeconda = parseFloat($(this).find('.resa-seconda').val()) || 0;
+              const resaTorchiato = parseFloat($(this).find('.resa-torchiato').val()) || 0;
+              const linea = $(this).find('.linea-trasformazione').val();
+              
+              const qtaSeconda = linea === 'BOE/1100' ? (quantitaTrasformata * resaSeconda / 100).toFixed(1) : '0';
+              const qtaTorchiato = (quantitaTrasformata * resaTorchiato / 100).toFixed(1);
+              
+              $(this).find('.quantita-seconda').val(qtaSeconda);
+              $(this).find('.quantita-torchiato').val(qtaTorchiato);
+          });
+          
+          // Applica le somme solo all'ultimo fornitore
+          lastSupplier.find('.quantita-seconda').val(totalSeconda.toFixed(1)).addClass('auto-sum-field');
+          lastSupplier.find('.quantita-torchiato').val(totalTorchiato.toFixed(1)).addClass('auto-sum-field');
+          
+          // Aggiungi dettagli somma
+          const details = calculateSumDetails();
+          const secondaDetails = formatSumDetails(details.filter(d => d.linea === 'BOE/1100'), 'seconda');
+          const torchiatoDetails = formatSumDetails(details, 'torchiato');
+          
+          if (secondaDetails) {
+              lastSupplier.find('.seconda-details').html(`<strong>Dettaglio:</strong> ${secondaDetails}`);
+          }
+          if (torchiatoDetails) {
+              lastSupplier.find('.torchiato-details').html(`<strong>Dettaglio:</strong> ${torchiatoDetails}`);
+          }
+          
+          // Salva i dettagli globalmente
+          sumDetailsSeconda = details.filter(d => d.linea === 'BOE/1100');
+          sumDetailsTorchiato = details;
+      }
+    }
+  
+  // Ottieni nomi fornitori dalla combinazione
+  function getSupplierNamesFromCombo(comboValue) {
+      const indexes = comboValue.split(',');
+      const names = [];
+      
+      indexes.forEach(index => {
+          const supplierRow = $(`[data-supplier-index="${index}"]`);
+          const fornitore = supplierRow.find('.nome-fornitore').val() || '';
+          const altroFornitore = supplierRow.find('.altro-fornitore').val();
+          const nomeFornitore = fornitore === 'ALTRO' ? altroFornitore : fornitore;
+          if (nomeFornitore) {
+              names.push(nomeFornitore);
+          }
+      });
+      
+      return names.join(' + ');
+  }
+  
+  // Applica combinazione - MODIFICATA per supportare A e B
+  function applyCombination(type) {
+      const selectedCombo = $(`#combinazione-fornitori-${type}`).val();
+      if (!selectedCombo) {
+          alert(`Seleziona prima una combinazione di fornitori ${type.toUpperCase()}`);
+          return;
+      }
+      
+      const indexes = selectedCombo.split(',');
+      let totale = 0;
+      let combinationDetails = []; // Array dettagli per questa combinazione
+      let combinationSupplierIndexes = indexes.map(i => parseInt(i)); // Indici fornitori
+      
+      indexes.forEach(index => {
+          const supplierRow = $(`[data-supplier-index="${index}"]`);
+          
+          // Raccogli informazioni complete del fornitore
+          const fornitore = supplierRow.find('.nome-fornitore').val() || '';
+          const altroFornitore = supplierRow.find('.altro-fornitore').val();
+          const nomeFornitore = fornitore === 'ALTRO' ? altroFornitore : fornitore;
+          const certificazione = supplierRow.find('.certificazione-prodotto').val() || 'N/D';
+          const lineaTrasformazione = supplierRow.find('.linea-trasformazione').val() || 'N/D';
+          
+          const quantitaTrasformata = parseFloat(supplierRow.find('.quantita-trasformata').val()) || 0;
+          const resaPrima = parseFloat(supplierRow.find('.resa-prima').val()) || 0;
+          
+          if (quantitaTrasformata > 0) {
+              totale += (quantitaTrasformata * resaPrima / 100);
+              
+              // Aggiungi dettagli completi del fornitore
+              combinationDetails.push({
+                  nome: nomeFornitore,
+                  certificazione: certificazione,
+                  linea: lineaTrasformazione,
+                  quantita: quantitaTrasformata,
+                  resa: resaPrima,
+                  risultato: (quantitaTrasformata * resaPrima / 100).toFixed(1),
+                  supplierIndex: parseInt(index)
+              });
+          }
+      });
+      
+      const lastSupplierInCombo = getLastSupplierInCombination(selectedCombo);
+      if (lastSupplierInCombo.length > 0) {
+          const quantitaPrimaField = lastSupplierInCombo.find('.quantita-prima');
+          quantitaPrimaField.val(totale.toFixed(1));
+          quantitaPrimaField.addClass('combination-result');
+          quantitaPrimaField.attr('data-combination-type', type); // Marca il tipo di combinazione
+          
+          // Crea testo dettagliato della combinazione
+          const detailedCombination = combinationDetails.map(detail => 
+              `F${detail.supplierIndex} - ${detail.nome} [${detail.certificazione}|${detail.linea}] = ${detail.risultato}kg`
+          ).join(' + ');
+          
+          // Salva variabili specifiche per tipo
+          if (type === 'a') {
+              lastCombinationSuppliersA = combinationDetails.map(detail => detail.nome).join(' + ');
+              combinationDetailsA = combinationDetails;
+              combinationSupplierIndexesA = combinationSupplierIndexes;
+          } else {
+              lastCombinationSuppliersB = combinationDetails.map(detail => detail.nome).join(' + ');
+              combinationDetailsB = combinationDetails;
+              combinationSupplierIndexesB = combinationSupplierIndexes;
+          }
+          
+          const noteElement = lastSupplierInCombo.find('.combination-note');
+          if (noteElement.length === 0) {
+              quantitaPrimaField.after(`<small class="combination-note text-warning d-block" style="font-size: 11px; line-height: 1.2;">Valore da combinazione ${type.toUpperCase()} fornitori:<br/>${detailedCombination}</small>`);
+          } else {
+              noteElement.html(`Valore da combinazione ${type.toUpperCase()} fornitori:<br/>${detailedCombination}`);
+          }
+          
+          alert(`Combinazione ${type.toUpperCase()} applicata! Quantità succo 1ª dell'ultimo fornitore incluso aggiornata a ${totale.toFixed(1)} kg\n\nDettaglio combinazione ${type.toUpperCase()}:\n${combinationDetails.map(d => `F${d.supplierIndex} - ${d.nome} [${d.certificazione}|${d.linea}]: ${d.quantita}kg × ${d.resa}% = ${d.risultato}kg`).join('\n')}`);
+          
+          // Aggiorna tabella riepilogo
+          updateSummaryTable();
+      } else {
+          alert('Nessun fornitore disponibile per applicare la combinazione');
+      }
+  }
+  
+  // Reset combinazione - MODIFICATA per supportare A e B
+  function resetCombination(type) {
+      $('.supplier-row').each(function() {
+          const quantitaPrimaField = $(this).find('.quantita-prima');
+          const combinationType = quantitaPrimaField.attr('data-combination-type');
+          
+          if (quantitaPrimaField.hasClass('combination-result') && combinationType === type) {
+              // Rimuovi la classe combination-result
+              quantitaPrimaField.removeClass('combination-result');
+              quantitaPrimaField.removeAttr('data-combination-type');
+              
+              // Rimuovi la nota di combinazione
+              $(this).find('.combination-note').remove();
+              
+              // Ricalcola il valore basandosi sulla resa
+              calculateYieldQuantities($(this));
+          }
+      });
+      
+      // Reset del select combinazioni
+      $(`#combinazione-fornitori-${type}`).val('');
+      
+      // Reset delle variabili memorizzate
+      if (type === 'a') {
+          lastCombinationSuppliersA = '';
+          combinationDetailsA = [];
+          combinationSupplierIndexesA = [];
+      } else {
+          lastCombinationSuppliersB = '';
+          combinationDetailsB = [];
+          combinationSupplierIndexesB = [];
+      }
+      
+      alert(`Combinazione ${type.toUpperCase()} rimossa. I valori del succo 1ª sono stati ricalcolati in base alle rese.`);
+      
+      // Aggiorna tabella riepilogo
+      updateSummaryTable();
+  }
+  
+  // Aggiorna stili BIO per certificazione, varietà e linea
+  function updateBioStyles(supplierElement) {
+      const certificazione = supplierElement.find('.certificazione-prodotto').val();
+      const certificazioneField = supplierElement.find('.certificazione-prodotto');
+      const varietaField = supplierElement.find('.varieta-prodotto');
+      const lineaField = supplierElement.find('.linea-trasformazione');
+      
+      certificazioneField.removeClass('bio-red-field');
+      varietaField.removeClass('bio-red-field');
+      lineaField.removeClass('bio-red-field');
+      
+      if (['BIO EU', 'BIO DEM', 'BIO NTD', 'BIO DEM/NTD'].includes(certificazione)) {
+          certificazioneField.addClass('bio-red-field');
+          varietaField.addClass('bio-red-field');
+          lineaField.addClass('bio-red-field');
+      }
+  }
+  
+  // Aggiunta nuovo fornitore
+  function addSupplier() {
+      supplierCount++;
+      const template = $('#fornitore-template').html();
+      const newSupplier = $(template);
+      
+      newSupplier.attr('data-supplier-index', supplierCount);
+      newSupplier.find('.supplier-number').text(supplierCount);
+      
+      const agrume = $('#tipo-agrume-giornaliero').val();
+      if (agrume) {
+          const yields = calculateAutoYields(agrume);
+          newSupplier.find('.resa-prima').val(yields.prima);
+          newSupplier.find('.resa-seconda').val(yields.seconda);
+          newSupplier.find('.resa-torchiato').val(yields.torchiato);
+          
+          // Aggiorna opzioni varietà in base al tipo di agrume
+          updateVarietyOptions(newSupplier, agrume);
+      }
+      
+      $('#fornitori-container').append(newSupplier);
+      
+      // Inizializza Select2 per destinazione multipla
+      newSupplier.find('.destinazione-prima').select2({
+          placeholder: "Seleziona fino a 3 destinazioni",
+          maximumSelectionLength: 3,
+          language: {
+              maximumSelected: function() {
+                  return "Puoi selezionare massimo 3 destinazioni";
+              }
+          }
+      });
+      
+      // Nascondi inizialmente la sezione succo 2ª
+      newSupplier.find('.seconda-section').addClass('hidden-field');
+      
+      attachSupplierEvents(newSupplier);
+      updateCombinazioneOptions();
+      toggleCombinazioniSection();
+      updateAutoSums();
+  }
+  
+  // Eventi per ogni fornitore
+  function attachSupplierEvents(supplierElement) {
+      const index = supplierElement.data('supplier-index');
+      
+      // Gestione campo "ALTRO" per fornitore
+      supplierElement.find('.nome-fornitore').change(function() {
+          const altroField = supplierElement.find('.altro-fornitore');
+          if ($(this).val() === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+          updateSummaryTable();
+          updateCombinazioneOptions();
+      });
+      
+      // Gestione campo "ALTRO" per fornitore (altro fornitore)
+      supplierElement.find('.altro-fornitore').on('input', function() {
+          updateCombinazioneOptions();
+          updateSummaryTable();
+      });
+      
+      // Gestione certificazione e colori
+      supplierElement.find('.certificazione-prodotto').change(function() {
+          const altroField = supplierElement.find('.altra-certificazione');
+          const certificazione = $(this).val();
+          
+          if (certificazione === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+          
+          updateDestinationColors(supplierElement);
+          updateBioStyles(supplierElement);
+          updateSummaryTable();
+          updateCombinazioneOptions();
+      });
+      
+      // Gestione altra certificazione
+      supplierElement.find('.altra-certificazione').on('input', function() {
+          updateCombinazioneOptions();
+          updateSummaryTable();
+      });
+      
+      // Gestione linea di trasformazione
+      supplierElement.find('.linea-trasformazione').change(function() {
+          updateBioStyles(supplierElement);
+          toggleSecondaSection(supplierElement);
+          updateCombinazioneOptions();
+          updateAutoSums();
+          updateSummaryTable();
+      });
+      
+      // Gestione campo "ALTRO" per varietà
+      supplierElement.find('.varieta-prodotto').change(function() {
+          const altroField = supplierElement.find('.altra-varieta');
+          if ($(this).val() === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+          updateSummaryTable();
+      });
+      
+      // Gestione bio status per colori destinazione
+      supplierElement.find('.bio-prima').change(function() {
+          updateDestinationColors(supplierElement);
+          updateSummaryTable();
+      });
+      
+      // Gestione campi "ALTRO" per tenore polpa
+      supplierElement.find('.tenore-polpa-prima').change(function() {
+          const altroField = supplierElement.find('.altro-tenore-prima');
+          if ($(this).val() === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+      });
+      
+      supplierElement.find('.tenore-polpa-seconda').change(function() {
+          const altroField = supplierElement.find('.altro-tenore-seconda');
+          if ($(this).val() === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+      });
+      
+      supplierElement.find('.tenore-polpa-torchiato').change(function() {
+          const altroField = supplierElement.find('.altro-tenore-torchiato');
+          if ($(this).val() === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+      });
+      
+      // Gestione campi "ALTRO" per Brix
+      supplierElement.find('.brix-prima, .brix-seconda, .brix-torchiato').change(function() {
+          const altroField = $(this).hasClass('brix-prima') ? supplierElement.find('.altro-brix-prima') :
+                             $(this).hasClass('brix-seconda') ? supplierElement.find('.altro-brix-seconda') :
+                             supplierElement.find('.altro-brix-torchiato');
+          
+          if ($(this).val() === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+      });
+      
+      // Gestione menu destinazioni multiple per succo 1ª - MODIFICATA: rimossa logica per concentrato
+      supplierElement.find('.destinazione-prima').on('change', function() {
+          const selectedValues = $(this).val() || [];
+          const container = $(this).parent();
+          const altroField = container.find('.altra-destinazione');
+          
+          if (selectedValues.includes('ALTRO')) {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+      });
+      
+      // Gestione menu destinazioni per seconda - MODIFICATA: rimossa logica per concentrato
+      supplierElement.find('.destinazione-seconda').change(function() {
+          const container = $(this).parent();
+          const altroField = container.find('.altra-destinazione');
+          
+          if ($(this).val() === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+      });
+      
+      // Gestione menu destinazioni per torchiato
+      supplierElement.find('.destinazione-torchiato').change(function() {
+          const container = $(this).parent();
+          const altroField = container.find('.altra-destinazione');
+          
+          if ($(this).val() === 'ALTRO') {
+              altroField.removeClass('hidden-field');
+          } else {
+              altroField.addClass('hidden-field').val('');
+          }
+      });
+      
+      // Calcoli automatici
+      supplierElement.find('.quantita-fornitore, .quantita-trasformata, .portata-impianto, .orario-inizio, .resa-prima, .resa-seconda, .resa-torchiato').on('input change', function() {
+          calculateEndTime(supplierElement);
+          calculateGiacenza(supplierElement);
+          calculateYieldQuantities(supplierElement);
+          updateTotals();
+          updateSummaryTable();
+          updateAutoSums();
+      });
+      
+      // Rimozione fornitore
+      supplierElement.find('.rimuovi-fornitore').click(function() {
+          if (confirm('Sei sicuro di voler rimuovere questo fornitore?')) {
+              supplierElement.remove();
+              updateTotals();
+              updateSummaryTable();
+              updateCombinazioneOptions();
+              toggleCombinazioniSection();
+              renumberSuppliers();
+              updateAutoSums();
+          }
+      });
+  }
+  
+  // Aggiorna colori destinazione in base a certificazione e bio status
+  function updateDestinationColors(supplierElement) {
+      const certificazione = supplierElement.find('.certificazione-prodotto').val();
+      const bioStatus = supplierElement.find('.bio-prima').val();
+      const destinazionePrimaLabel = supplierElement.find('.destinazione-prima-label');
+      const destinazionePrimaSelect = supplierElement.find('.destinazione-prima').next('.select2-container');
+      
+      destinazionePrimaLabel.removeClass('bio-red-text bio-black-text');
+      destinazionePrimaSelect.removeClass('bio-red-text bio-black-text');
+      
+      if (['BIO EU', 'BIO DEM', 'BIO NTD', 'BIO DEM/NTD'].includes(certificazione)) {
+          if (bioStatus === 'DECLASSATO') {
+              destinazionePrimaLabel.addClass('bio-black-text');
+              destinazionePrimaSelect.find('.select2-selection').css('color', '#000000').css('font-weight', 'bold');
+          } else {
+              destinazionePrimaLabel.addClass('bio-red-text');
+              destinazionePrimaSelect.find('.select2-selection').css('color', '#dc3545').css('font-weight', 'bold');
+          }
+      }
+  }
+  
+  // Calcolo orario fine lavorazione con gestione giorno successivo
+  function calculateEndTime(supplierElement) {
+      const quantitaTrasformata = parseFloat(supplierElement.find('.quantita-trasformata').val()) || 0;
       const portata = parseFloat(supplierElement.find('.portata-impianto').val()) || 0;
       const orarioInizio = supplierElement.find('.orario-inizio').val();
       
